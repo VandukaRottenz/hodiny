@@ -2,182 +2,136 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hodiny</title>
-    <link href="https://fonts.googleapis.com/css2?family=Product+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vandukas Clock</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400&family=Stardos+Stencil:wght@400&display=swap" rel="stylesheet">
     
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            background-color: black;
-            color: white;
-            /* Priorita pre Google Sans / Product Sans */
-            font-family: 'Product Sans', 'Google Sans', Arial, sans-serif;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            user-select: none;
-            cursor: none; /* Štandardne skrytý kurzor */
-        }
+        /* Import Google Sans a LCD Digital */
+        @import url('https://fonts.cdnfonts.com/css/product-sans');
+        @import url('https://fonts.cdnfonts.com/css/seven-segment');
 
-        #clock-container {
-            text-align: center;
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: black; color: white;
+            font-family: 'Product Sans', sans-serif;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; cursor: none;
         }
 
         #time {
             font-size: 30vw; 
             font-weight: 400;
-            display: flex;
-            align-items: center;
+            display: flex; align-items: center;
             letter-spacing: -0.02em;
+            transition: font-family 0.2s ease;
         }
 
-        /* Blikajúca dvojbodka */
-        #separator {
-            animation: blink 1s step-start infinite;
-            padding: 0 0.05em;
-            position: relative;
-            top: -0.05em; /* Jemná korekcia výšky dvojbodky pre tento font */
-        }
+        /* Triedy pre vybrané 4 fonty */
+        .f-google { font-family: 'Product Sans', sans-serif; }
+        .f-oswald { font-family: 'Oswald', sans-serif; }
+        .f-stencil { font-family: 'Stardos Stencil', serif; }
+        .f-lcd { font-family: 'Seven Segment', sans-serif; letter-spacing: 0.05em; }
 
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
+        /* Blikanie dvojbodky */
+        #sep { animation: blink 1s step-start infinite; padding: 0 0.05em; }
+        @keyframes blink { 50% { opacity: 0; } }
 
-        /* Nastavenia - Overlay */
-        #settings-overlay {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: rgba(30, 30, 30, 0.9);
-            padding: 20px;
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.4s ease, visibility 0.4s;
-            z-index: 100;
+        /* Nastavenia - UI */
+        #ui {
+            position: fixed; top: 20px; right: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            padding: 18px; border-radius: 14px;
+            display: flex; flex-direction: column; gap: 10px;
+            opacity: 0; visibility: hidden;
+            transition: opacity 0.3s; z-index: 100;
             border: 1px solid #444;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            min-width: 180px;
         }
 
-        #settings-overlay.visible {
-            opacity: 1;
-            visibility: visible;
+        #ui.visible { opacity: 1; visibility: visible; }
+
+        #font-label {
+            color: #4da3ff; font-weight: bold; font-size: 13px;
+            margin-bottom: 4px; font-family: sans-serif;
         }
 
-        /* Ovládacie prvky v nastaveniach */
         button {
-            cursor: pointer;
-            padding: 10px 15px;
-            font-size: 14px;
-            border: none;
-            border-radius: 6px;
-            background: #444;
-            color: white;
-            transition: background 0.2s;
+            cursor: pointer; padding: 10px; border-radius: 8px;
+            border: none; background: #555; color: white;
+            font-size: 13px; font-weight: 500;
         }
 
-        button:hover {
-            background: #666;
-        }
-
-        input[type=range] {
-            cursor: pointer;
-            width: 200px;
-        }
-
-        label {
-            font-size: 12px;
-            color: #aaa;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* Zobrazenie kurzora pri aktivite */
-        body.ui-active {
-            cursor: default;
-        }
+        button:hover { background: #666; }
+        input[type=range] { width: 100%; cursor: pointer; }
+        label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        body.active { cursor: default; }
     </style>
 </head>
-<body onmousemove="resetTimer()" onclick="resetTimer()">
+<body onmousemove="showUI()" onclick="showUI()" ontouchstart="showUI()">
 
-    <div id="clock-container">
-        <div id="time">
-            <span id="hours">00</span>
-            <span id="separator">:</span>
-            <span id="minutes">00</span>
-        </div>
+    <div id="time" class="f-google">
+        <span id="h">00</span><span id="sep">:</span><span id="m">00</span>
     </div>
 
-    <div id="settings-overlay" id="ui">
-        <label>Veľkosť hodín</label>
-        <input type="range" id="sizeSlider" min="10" max="90" value="30" oninput="changeSize(this.value)">
+    <div id="ui">
+        <label>Štýl písma</label>
+        <div id="font-label">Google Sans</div>
+
+        <label>Veľkosť</label>
+        <input type="range" min="10" max="95" value="30" oninput="updateSize(this.value)">
         
-        <button onclick="toggleFullScreen()">Prepnúť Fullscreen</button>
-        <button onclick="hideUI()">Zavrieť teraz</button>
+        <label>Ovládanie</label>
+        <button onclick="changeFont()">Zmeniť font</button>
+        <button onclick="hideUI()">Zavrieť</button>
     </div>
 
     <script>
-        let idleTimer;
-        const overlay = document.getElementById('settings-overlay');
+        let timer;
+        const fontData = [
+            { id: 'f-google', n: 'Google Sans' },
+            { id: 'f-oswald', n: 'Oswald' },
+            { id: 'f-stencil', n: 'Stardos Stencil' },
+            { id: 'f-lcd', n: 'LCD Digital' }
+        ];
+        let idx = 0;
 
-        // 1. Aktualizácia času (24h formát)
         function updateClock() {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            
-            document.getElementById('hours').textContent = h;
-            document.getElementById('minutes').textContent = m;
+            const d = new Date();
+            document.getElementById('h').textContent = String(d.getHours()).padStart(2, '0');
+            document.getElementById('m').textContent = String(d.getMinutes()).padStart(2, '0');
         }
 
-        // 2. Logika zobrazenia a automatického skrytia UI
-        function resetTimer() {
-            // Zobraziť UI a kurzor
-            overlay.classList.add('visible');
-            document.body.classList.add('ui-active');
+        function changeFont() {
+            const clock = document.getElementById('time');
+            const label = document.getElementById('font-label');
+            clock.classList.remove(fontData[idx].id);
+            idx = (idx + 1) % fontData.length;
+            clock.classList.add(fontData[idx].id);
+            label.textContent = fontData[idx].n;
+            showUI(); 
+        }
 
-            // Zrušiť predchádzajúci časovač
-            clearTimeout(idleTimer);
+        function updateSize(v) {
+            document.getElementById('time').style.fontSize = v + 'vw';
+        }
 
-            // Nastaviť nový časovač na 5 sekúnd
-            idleTimer = setTimeout(hideUI, 5000);
+        function showUI() {
+            document.getElementById('ui').classList.add('visible');
+            document.body.classList.add('active');
+            clearTimeout(timer);
+            timer = setTimeout(hideUI, 3500);
         }
 
         function hideUI() {
-            overlay.classList.remove('visible');
-            document.body.classList.remove('ui-active');
+            document.getElementById('ui').classList.remove('visible');
+            document.body.classList.remove('active');
         }
 
-        // 3. Zmena veľkosti písma
-        function changeSize(val) {
-            document.getElementById('time').style.fontSize = val + 'vw';
-        }
-
-        // 4. Fullscreen funkcia
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen();
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                }
-            }
-        }
-
-        // Spustenie
         setInterval(updateClock, 1000);
         updateClock();
-        
-        // Inicializácia skrytia pri načítaní
-        idleTimer = setTimeout(hideUI, 5000);
     </script>
 </body>
 </html>
